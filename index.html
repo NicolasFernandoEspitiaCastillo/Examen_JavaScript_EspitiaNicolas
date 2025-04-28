@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="contenedor">
+        <section class="formulario">
+            <h1>Registrar Receta</h1>
+            <form id="formularioReceta">
+                <input type="text" id="nombre" placeholder="Nombre de la receta">
+                <textarea id="ingredientes" placeholder="Ingredientes"></textarea>
+                <textarea id="instrucciones" placeholder="Instrucciones de preparación"></textarea>
+                <input type="number" id="tiempo" placeholder="Tiempo de preparación (minutos)">
+                <input type="number" id="porciones" placeholder="Número de porciones">
+
+                <select id="categoria">
+                    <option value="">Categoría</option>
+                    <option value="Desayuno">Desayuno</option>
+                    <option value="Almuerzo">Almuerzo</option>
+                    <option value="Cena">Cena</option>
+                    <option value="Postre">Postre</option>
+                </select>
+
+                <select id="dificultad">
+                    <option value="">Dificultad</option>
+                    <option value="Fácil">Fácil</option>
+                    <option value="Medio">Medio</option>
+                    <option value="Difícil">Difícil</option>
+                </select>
+
+                <button type="submit" id="guardar">Guardar Receta</button>
+            </form>
+        </section>
+
+        <section class="busqueda">
+            <input type="text" id="buscar" placeholder="Buscar receta por nombre...">
+            <select id="filtroCategoria">
+                <option value="">Todas las categorías</option>
+                <option value="Desayuno">Desayuno</option>
+                <option value="Almuerzo">Almuerzo</option>
+                <option value="Cena">Cena</option>
+                <option value="Postre">Postre</option>
+            </select>
+            <select id="filtroDificultad">
+                <option value="">Todas las dificultades</option>
+                <option value="Fácil">Fácil</option>
+                <option value="Medio">Medio</option>
+                <option value="Difícil">Difícil</option>
+            </select>
+        </section>
+
+        <section class="recetas" id="listaRecetas">
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
+
+</section>
+<script>
+    let recetas = JSON.parse(localStorage.getItem('recetas')) || [];
+    let editandoId = null;
+
+    const formulario = document.getElementById('formularioReceta');
+    const listaRecetas = document.getElementById('listaRecetas');
+    const buscarInput = document.getElementById('buscar');
+    const filtroCategoria = document.getElementById('filtroCategoria');
+    const filtroDificultad = document.getElementById('filtroDificultad');
+
+    formulario.addEventListener('submit', guardarReceta);
+    buscarInput.addEventListener('input', mostrarRecetas);
+    filtroCategoria.addEventListener('change', mostrarRecetas);
+    filtroDificultad.addEventListener('change', mostrarRecetas);
+
+    function guardarReceta(e) {
+        e.preventDefault();
+        const nombre = document.getElementById('nombre').value.trim();
+        const ingredientes = document.getElementById('ingredientes').value.trim();
+        const instrucciones = document.getElementById('instrucciones').value.trim();
+        const tiempo = parseInt(document.getElementById('tiempo').value.trim());
+        const porciones = parseInt(document.getElementById('porciones').value.trim());
+        const categoria = document.getElementById('categoria').value;
+        const dificultad = document.getElementById('dificultad').value;
+
+        if (!nombre || !ingredientes || !instrucciones || isNaN(tiempo) || tiempo <= 0 || isNaN(porciones) || porciones <= 0 || !categoria || !dificultad) {
+            alert('Por favor completa todos los campos correctamente.');
+            return;
+        }
+
+        if (editandoId !== null) {
+            recetas = recetas.map(r => r.id === editandoId ? { id: editandoId, nombre, ingredientes, instrucciones, tiempo, porciones, categoria, dificultad } : r);
+            editandoId = null;
+        } else {
+            recetas.push({
+                id: Date.now(),
+                nombre,
+                ingredientes,
+                instrucciones,
+                tiempo,
+                porciones,
+                categoria,
+                dificultad
+            });
+        }
+
+        localStorage.setItem('recetas', JSON.stringify(recetas));
+        formulario.reset();
+        mostrarRecetas();
+    }
+
+    function mostrarRecetas() {
+        const busqueda = buscarInput.value.toLowerCase();
+        const categoriaFiltro = filtroCategoria.value;
+        const dificultadFiltro = filtroDificultad.value;
+
+        listaRecetas.innerHTML = '';
+
+        recetas.filter(r =>
+            (r.nombre.toLowerCase().includes(busqueda)) &&
+            (categoriaFiltro === '' || r.categoria === categoriaFiltro) &&
+            (dificultadFiltro === '' || r.dificultad === dificultadFiltro)
+        ).forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'receta';
+            div.innerHTML = `
+        <h2>${r.nombre}</h2>
+        <p><strong>Ingredientes:</strong> ${r.ingredientes}</p>
+        <p><strong>Instrucciones:</strong> ${r.instrucciones}</p>
+        <p><strong>Tiempo de preparación:</strong> ${r.tiempo} minutos</p>
+        <p><strong>Porciones:</strong> ${r.porciones}</p>
+        <p><strong>Categoría:</strong> ${r.categoria}</p>
+        <p><strong>Dificultad:</strong> ${r.dificultad}</p>
+        <div class="botones">
+            <button onclick="editarReceta(${r.id})">Editar</button>
+            <button onclick="eliminarReceta(${r.id})">Eliminar</button>
+        </div>
+    `;
+            listaRecetas.appendChild(div);
+        });
+    }
+
+    function editarReceta(id) {
+        const receta = recetas.find(r => r.id === id);
+        document.getElementById('nombre').value = receta.nombre;
+        document.getElementById('ingredientes').value = receta.ingredientes;
+        document.getElementById('instrucciones').value = receta.instrucciones;
+        document.getElementById('tiempo').value = receta.tiempo;
+        document.getElementById('porciones').value = receta.porciones;
+        document.getElementById('categoria').value = receta.categoria;
+        document.getElementById('dificultad').value = receta.dificultad;
+        editandoId = id;
+    }
+
+    function eliminarReceta(id) {
+        if (confirm('¿Seguro que quieres eliminar esta receta?')) {
+            recetas = recetas.filter(r => r.id !== id);
+            localStorage.setItem('recetas', JSON.stringify(recetas));
+            mostrarRecetas();
+        }
+    }
+
+    mostrarRecetas();
+
+</script>
+
+
+</body>
+
+</html>
